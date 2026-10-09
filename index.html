@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>于宪森待办记录</title>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --ink: #1f2430;
+    --muted: #8a91a3;
+    --brand: #4f6ef2;
+    --brand-soft: #eef1fe;
+    --done: #b7bdcb;
+    --danger: #e5534b;
+    --line: #e7eaf1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    min-height: 100vh;
+    padding: 40px 16px;
+    display: flex;
+    justify-content: center;
+  }
+  .wrap { width: 100%; max-width: 640px; }
+  header { margin-bottom: 24px; }
+  header h1 { font-size: 26px; letter-spacing: 1px; }
+  header p { color: var(--muted); margin-top: 6px; font-size: 14px; }
+  .card {
+    background: var(--card);
+    border-radius: 16px;
+    box-shadow: 0 8px 30px rgba(31, 36, 48, .06);
+    padding: 20px;
+  }
+  .add-row { display: flex; gap: 10px; margin-bottom: 18px; }
+  input[type="text"] {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  input[type="text"]:focus { border-color: var(--brand); }
+  button {
+    border: none; cursor: pointer; font-size: 14px;
+    border-radius: 10px; transition: transform .05s, background .15s;
+  }
+  button:active { transform: scale(.96); }
+  .btn-add { background: var(--brand); color: #fff; padding: 0 20px; }
+  .btn-add:hover { background: #3f5ee0; }
+  ul { list-style: none; }
+  li {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 4px; border-bottom: 1px solid var(--line);
+    animation: fade .2s ease;
+  }
+  li:last-child { border-bottom: none; }
+  @keyframes fade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; } }
+  .txt { flex: 1; font-size: 15px; word-break: break-all; }
+  li.done .txt { text-decoration: line-through; color: var(--done); }
+  .del { background: transparent; color: var(--danger); padding: 6px 8px; font-size: 13px; }
+  .del:hover { background: #fdeeec; }
+  .footer {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 16px; color: var(--muted); font-size: 13px;
+  }
+  .footer a { color: var(--brand); text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+  .empty { text-align: center; color: var(--muted); padding: 24px 0; font-size: 14px; }
+  .checkbox {
+    width: 20px; height: 20px; flex: none;
+    border: 2px solid #c6cbd9; border-radius: 6px;
+    cursor: pointer; display: grid; place-items: center;
+    background: transparent; padding: 0; transition: all .15s;
+  }
+  .checkbox.checked { background: var(--brand); border-color: var(--brand); }
+  .checkbox.checked::after { content: "✓"; color: #fff; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📝 于宪森待办记录</h1>
+    <p>点击左侧方块勾选完成，点击「删除」移除事项。数据保存在本机浏览器中。</p>
+  </header>
+
+  <div class="card">
+    <div class="add-row">
+      <input type="text" id="new-todo" maxlength="200" placeholder="输入新的待办事项，回车或点击「添加」…">
+      <button class="btn-add" id="btn-add">添加</button>
+    </div>
+    <ul id="list"></ul>
+    <div class="footer">
+      <span id="counter">共 0 项</span>
+      <a href="#" id="clear-done">清除已完成</a>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = "yuxiansen-todos";
+  let todos = load();
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function save() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+  }
+
+  function render() {
+    const list = document.getElementById("list");
+    list.innerHTML = "";
+    const undone = todos.filter(t => !t.done).length;
+    document.getElementById("counter").textContent =
+      `共 ${todos.length} 项 · 未完成 ${undone} 项`;
+
+    if (todos.length === 0) {
+      const li = document.createElement("li");
+      li.innerHTML = '<div class="empty">暂无待办事项，从上面添加一条吧 🎉</div>';
+      list.appendChild(li);
+      return;
+    }
+
+    todos.forEach((todo, index) => {
+      const li = document.createElement("li");
+      li.className = todo.done ? "done" : "";
+
+      const box = document.createElement("button");
+      box.className = "checkbox" + (todo.done ? " checked" : "");
+      box.setAttribute("aria-label", "切换完成状态");
+      box.onclick = () => { todo.done = !todo.done; save(); render(); };
+
+      const txt = document.createElement("span");
+      txt.className = "txt";
+      txt.textContent = todo.text;
+
+      const del = document.createElement("button");
+      del.className = "del";
+      del.textContent = "删除";
+      del.onclick = () => { todos.splice(index, 1); save(); render(); };
+
+      li.appendChild(box);
+      li.appendChild(txt);
+      li.appendChild(del);
+      list.appendChild(li);
+    });
+  }
+
+  function addTodo() {
+    const input = document.getElementById("new-todo");
+    const text = input.value.trim();
+    if (!text) return;
+    todos.unshift({ text, done: false });
+    save();
+    input.value = "";
+    render();
+    input.focus();
+  }
+
+  document.getElementById("btn-add").onclick = addTodo;
+  document.getElementById("new-todo").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addTodo();
+  });
+  document.getElementById("clear-done").onclick = (e) => {
+    e.preventDefault();
+    todos = todos.filter(t => !t.done);
+    save();
+    render();
+  };
+
+  render();
+</script>
+</body>
+</html>
